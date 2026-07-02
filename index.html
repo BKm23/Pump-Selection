@@ -217,10 +217,19 @@ table.ds td,table.ds th{border:1px solid var(--line);padding:4px 7px;text-align:
   var vendors = (CFG && CFG.vendors) || [];
   var pending = vendors.length;
   if (!pending) return boot();
+  // Try data/<key>.js first (folder layout); if that 404s, fall back to
+  // <key>.js at the repo root (flat layout). Robust to either upload style.
   vendors.forEach(function(v){
+    var done = function(){ if(--pending === 0) boot(); };
     var s = document.createElement("script");
     s.src = "data/" + v.key + ".js";
-    s.onload = s.onerror = function(){ if(--pending === 0) boot(); };
+    s.onload = done;
+    s.onerror = function(){
+      var s2 = document.createElement("script");
+      s2.src = v.key + ".js";
+      s2.onload = done; s2.onerror = done;
+      document.head.appendChild(s2);
+    };
     document.head.appendChild(s);
   });
 })();
@@ -460,6 +469,7 @@ function renderCurveSVG(r,inp){
         📈 Published GPM9 curve for ${p.model} ${p.size} — read exact efficiency, NPSHr &amp; power here:</div>
       <a href="${p.curve_image}" target="_blank" title="Open full size in new tab">
         <img src="${p.curve_image}" alt="Published Goulds curve ${p.model} ${p.size}"
+             onerror="this.onerror=null;this.src='${p.curve_image.split('/').pop()}';this.parentNode.href=this.src"
              style="width:100%;max-width:640px;border:1px solid var(--line);border-radius:6px;background:#fff" loading="lazy">
       </a>
       <div class="small muted">Scanned from the ITT Goulds GPM9 manual. Click the image to open full size. Use these published values for final duty verification.</div>
